@@ -11,6 +11,8 @@ TO DO
 The project is organized as follows:
 ```
 .
+├── analytics
+│   └── loader.py
 ├── api
 │   ├── bondora_api.py
 │   └── urls.py
@@ -27,6 +29,8 @@ The project is organized as follows:
 ├── settings.cfg
 └── setup_logger.py
 ```
+* The folder `analytics` contains analytical tools:
+  * `loader.py` - Python class to load the resale statistic from Internet, process it, and save to a file
 * The folder `api` contains a low-level Python wrapper of the official Bondora API:
   * `bondora_api.py` - Python wrapper class
   * `urls.py` - collection of API endpoints
