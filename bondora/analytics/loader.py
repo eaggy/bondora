@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """The file contains the class definition of Bondora data loader."""
 
-import re
 import os
 import sys
 import inspect
@@ -24,19 +23,19 @@ from toolkit import str_to_date
 URL_DATA = 'https://www.bondora.com/marketing/media/ResaleArchive.zip'
 
 
-class DataLoader(object):
+class DataLoader():
     """Class representation of data loader."""
 
-    def __init__(self, start_date=None, end_date=None):
+    def __init__(self, start_date, end_date):
         """
-        Call constructor of class.
+        Initialize the class instance.
 
         Parameters
         ----------
-        start_date : datetime.date, optional
-            Start date of transactions to select. The default is None.
-        end_date : datetime.date, optional
-            End date of transactions to select. The default is None.
+        start_date : str
+            Start date of transactions to select.
+        end_date : str
+            End date of transactions to select.
 
         Returns
         -------
@@ -130,8 +129,8 @@ class DataLoader(object):
         try:
             # select important columns and rows corresponding
             # to successful transactions (`Result` == 'Successful')
-            columns = ['loan_id', 'PrincipalAtEnd',
-                       'DiscountRate', 'StartDate', 'EndDate']
+            columns = ['PrincipalAtEnd', 'DiscountRate',
+                       'StartDate', 'EndDate']
             df = self.data.loc[self.data['Result'] == 'Successful', columns]
 
             # convert column type from string to datetime format
@@ -152,13 +151,12 @@ class DataLoader(object):
             # set `DiscountRate` as integer
             df['DiscountRate'] = df['DiscountRate'].astype(int)
 
-            # remove '{' and '}' from 'loan_id' column
-            df['loan_id'] = df['loan_id'].apply(
-                lambda x: re.sub(r'[\{\}]', '', x))
-
             # calculate time (in seconds) how long a loan was offered for sale
             df['OfferTime'] = (df['EndDate'] - df['StartDate']).astype(
                 'timedelta64[s]')
+
+            # remove column `StartDate`
+            df.drop('StartDate', axis=1, inplace=True)
 
             # reset index
             df.reset_index(drop=True, inplace=True)
