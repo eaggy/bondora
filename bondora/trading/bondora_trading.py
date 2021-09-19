@@ -100,7 +100,9 @@ class BondoraTrading(BondoraApi):
             loan_selector = (
                 payload['NextPaymentNr'] == 1
                 and
-                payload['DesiredDiscountRate'] <= 2.0
+                (payload['DesiredDiscountRate'] <= 0.0 or
+                 (payload['DesiredDiscountRate'] <= 0.0 and
+                  payload['Country'] == 'EE'))
                 and
                 payload['LoanStatusCode'] == 2
                 and
@@ -114,7 +116,7 @@ class BondoraTrading(BondoraApi):
                 and
                 payload['Amount'] <= 5.0
                 and
-                payload['Interest'] > 12.0
+                payload['Interest'] > 18.0
                 and
                 payload['NrOfScheduledPayments'] > 36
                 and
@@ -346,7 +348,7 @@ class BondoraTrading(BondoraApi):
         self.get_investments(retry, **kwargs)
 
         # calculate latest selling date of loans before the next payment
-        if min_price:
+        if min_price is not None:
             latest_sell_date = date.today() + timedelta(
                 days=days_before_payment)
 
@@ -356,7 +358,7 @@ class BondoraTrading(BondoraApi):
             for investment in self.investments:
                 try:
                     # calculate selling price
-                    if min_price:
+                    if min_price is not None:
                         next_payment_date = datetime.strptime(
                             investment['NextPaymentDate'],
                             '%Y-%m-%dT00:00:00').date()
