@@ -18,7 +18,7 @@ from trading.bondora_trading import BondoraTrading
 
 PATH_SETTINGS = '/var/www/flask/bondora/settings.cfg'
 
-price = -80 # selling price (-85%)
+price = -85 # selling price (-85%)
 
 
 # read configuration
@@ -62,16 +62,16 @@ def offer_red_loans(token, price, retry=True):
     # and last payment date not within last 12 months
     last_payment = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
     bt.cancel_sm_offers(retry=retry,
+                        last_payment_date=last_payment,
                         LoanStatusCode=5,
-                        LoanDebtManagementStageType=3,
-                        LastPaymentDateTo=last_payment)
+                        LoanDebtManagementStageType=3)
 
     # place these loans on secondary market for selling
     bt.place_sm_offers(max_price=price,
                        retry=retry,
+                       last_payment_date=last_payment,
                        LoanStatusCode=5,
-                       LoanDebtManagementStageType=3,
-                       LastPaymentDateTo=last_payment)
+                       LoanDebtManagementStageType=3)
 
 
 if __name__ == "__main__":
