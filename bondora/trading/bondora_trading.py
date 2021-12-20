@@ -7,7 +7,6 @@ import inspect
 import urllib3
 import time
 from datetime import date, datetime, timedelta
-from setup_logger import logger
 
 currentdir = os.path.dirname(
     os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -246,7 +245,7 @@ class BondoraTrading(BondoraApi):
             #logger.error(e)
             pass
 
-    def cancel_sm_offers(self, retry=False, **kwargs):
+    def cancel_sm_offers(self, retry=False, last_payment_date=None, **kwargs):
         """
         Cancel selling of own loans offered on secondary market.
 
@@ -258,6 +257,8 @@ class BondoraTrading(BondoraApi):
         ----------
         retry : bool, optional
             Retry to execute the method. The default is False.
+        last_payment_date : str (%Y-%m-%d), optional
+            Last payment date. The default is None.
         **kwargs : dict
             Keyword arguments:
                 Loans conditions to cancel.
@@ -282,6 +283,12 @@ class BondoraTrading(BondoraApi):
         if self.sm:
             for loan_on_sm in self.sm:
                 try:
+                    # select loans according to the last payment date
+                    if last_payment_date:
+                        if loan_on_sm['LastPaymentDate']: 
+                            if loan_on_sm[
+                                    'LastPaymentDate'] >= last_payment_date:
+                                continue
                     ids.append(loan_on_sm['Id'])
                 except Exception as e:
                     logger.error(e)
@@ -310,7 +317,8 @@ class BondoraTrading(BondoraApi):
                              'Error code: {}'.format(response.status_code))
 
     def place_sm_offers(self, max_price, min_price=None,
-                        days_before_payment=2, retry=False, **kwargs):
+                        days_before_payment=2, retry=False,
+                        last_payment_date=None, **kwargs):
         """
         Place loans for selling on secondary market.
 
@@ -332,6 +340,8 @@ class BondoraTrading(BondoraApi):
             The default is 2.
         retry : bool, optional
             Retry to execute the method. The default is False.
+        last_payment_date : str (%Y-%m-%d), optional
+            Last payment date. The default is None.
         **kwargs : dict
             Keyword arguments:
                 Loans conditions to select for selling.
@@ -357,6 +367,13 @@ class BondoraTrading(BondoraApi):
         if self.investments:
             for investment in self.investments:
                 try:
+                    # select loans according to the last payment date
+                    if last_payment_date:
+                        if investment['LastPaymentDate']: 
+                            if investment[
+                                    'LastPaymentDate'] >= last_payment_date:
+                                continue
+
                     # calculate selling price
                     if min_price is not None:
                         next_payment_date = datetime.strptime(
