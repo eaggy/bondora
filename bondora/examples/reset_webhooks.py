@@ -63,7 +63,7 @@ def reset_webhooks(user, password, application_id, threshold, randomize=0):
     None.
 
     """
-    # wait random number of seconds before proceed
+    # wait random number of seconds before proceeding
     if randomize > 0:
         time.sleep(randrange(randomize))
 
