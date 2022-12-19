@@ -30,20 +30,20 @@ The project is organized as follows:
 └── setup_logger.py
 ```
 * The folder `analytics` contains analytical tools:
-  * `loader.py` - Python class to load the resale statistic from Internet, process it, and save to a file
+    * `loader.py` - Python class to load the resale statistic from Internet, process it, and save to a file
 * The folder `api` contains a low-level Python wrapper of the official Bondora API:
-  * `bondora_api.py` - Python wrapper class
-  * `urls.py` - collection of API endpoints
+    * `bondora_api.py` - Python wrapper class
+    * `urls.py` - collection of API endpoints
 * The folder `examples` contains a few examples of using this project:
-  * `offer_green_loans.py` - how to offer current (green) loans for selling on the secondary market
-  * `offer_red_loans.py` - how to offer defaulted (red) loans for selling on the secondary market
-  * `reset_webhooks.py` - how to unblock a webhook endpoint, if it has been blocked by Bondora. Bondora blocs a webhook endpoint after generating 25 errors as a response to the POST request.
+    * `offer_green_loans.py` - how to offer current (green) loans for selling on the secondary market
+    * `offer_red_loans.py` - how to offer defaulted (red) loans for selling on the secondary market
+    * `reset_webhooks.py` - how to unblock a webhook endpoint, if it has been blocked by Bondora. Bondora blocs a webhook endpoint after generating 25 errors as a response to the POST request.
 * The folder `hooks` contains functionality required for receiving and proceeding webhook notifications from Bondora:
-  * `application.py` - Python class to communicate with the Bondora API web interface
-  * `hooks.wsgi` - *mod_wsgi* application file
-  * `listener.py` - webhook listener
+    * `application.py` - Python class to communicate with the Bondora API web interface
+    * `hooks.wsgi` - *mod_wsgi* application file
+    * `listener.py` - webhook listener
 * The folder `trading` contains functionality for trading using the Bondora API:
-  * `bondora_trading.py` - high-level Python class for trading
+    * `bondora_trading.py` - high-level Python class for trading
 
 * `settings.cfg` - project settings file
 * `setup_logger.py` - logger class
