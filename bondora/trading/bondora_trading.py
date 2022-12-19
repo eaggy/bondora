@@ -95,13 +95,12 @@ class BondoraTrading(BondoraApi):
             # check buying conditions
             today = datetime.now()
             next_pm_date = date.fromisoformat(payload['NextPaymentDate'][:10])
-            pm_date_min = (today + timedelta(days=7)).date()
+            pm_date_min = (today + timedelta(days=6)).date()
+            pm_date_min1 = (today + timedelta(days=10)).date()
             loan_selector = (
                 payload['NextPaymentNr'] == 1
                 and
-                (payload['DesiredDiscountRate'] <= 0.0 or
-                 (payload['DesiredDiscountRate'] <= 0.0 and
-                  payload['Country'] == 'EE'))
+                payload['DesiredDiscountRate'] <= 0.0
                 and
                 payload['LoanStatusCode'] == 2
                 and
@@ -115,14 +114,40 @@ class BondoraTrading(BondoraApi):
                 and
                 payload['Amount'] <= 5.0
                 and
-                payload['Interest'] > 18.0
+                payload['Interest'] > 14.0
                 and
-                payload['NrOfScheduledPayments'] > 36
+                payload['NrOfScheduledPayments'] >= 36
                 and
                 next_pm_date > pm_date_min
                 )
 
-            if loan_selector:
+            loan_selector1 = (
+                    payload['NextPaymentNr'] == 1
+                    and
+                    payload['DesiredDiscountRate'] <= 1.0
+                    and
+                    payload['Country'] == 'EE'
+                    and
+                    payload['LoanStatusCode'] == 2
+                    and
+                    not payload['ReScheduledOn']
+                    and
+                    not payload['DebtOccuredOn']
+                    and
+                    not payload['DebtOccuredOnForSecondary']
+                    and
+                    payload['LateAmountTotal'] == 0.0
+                    and
+                    payload['Amount'] <= 5.0
+                    and
+                    payload['Interest'] > 20.0
+                    and
+                    payload['NrOfScheduledPayments'] == 60
+                    and
+                    next_pm_date > pm_date_min1
+            )
+
+            if loan_selector or loan_selector1:
                 self.buy_on_secondarymarket([payload['Id']])
                 #with open(PATH_DATA + '/buy_green_{}.log'.format(
                 #        self.user[0:5]), 'a') as outfile:
@@ -188,7 +213,7 @@ class BondoraTrading(BondoraApi):
                 return None
 
             # check buying conditions 2
-            if payload['DesiredDiscountRate'] > -69.0:
+            if payload['DesiredDiscountRate'] > -70.0:
                 return None
             loan_selector_2 = (
                 # default at least 90 days ago
@@ -210,20 +235,20 @@ class BondoraTrading(BondoraApi):
                 date.fromisoformat(payload['LoanTransfers'][-3]['Date'][:10]) >
                 (today - timedelta(days=90)).date()
                 and
-                # payment p.a. is larger than 19% (last payment)
+                # payment p.a. is larger than 24% (last payment)
                 (12.0 * payload['LoanTransfers'][-1]['TotalAmount'] /
                  (payload['PrincipalRemaining'] *
-                  (1.0 + payload['DesiredDiscountRate'] / 100.0))) > 0.19
+                  (1.0 + payload['DesiredDiscountRate'] / 100.0))) > 0.24
                 and
-                # payment p.a. is larger than 19% (second last payment)
+                # payment p.a. is larger than 24% (second last payment)
                 (12.0 * payload['LoanTransfers'][-2]['TotalAmount'] /
                  (payload['PrincipalRemaining'] *
-                  (1.0 + payload['DesiredDiscountRate'] / 100.0))) > 0.19
+                  (1.0 + payload['DesiredDiscountRate'] / 100.0))) > 0.24
                 and
-                # payment p.a. is larger than 19% (third last payment)
+                # payment p.a. is larger than 24% (third last payment)
                 (12.0 * payload['LoanTransfers'][-3]['TotalAmount'] /
                  (payload['PrincipalRemaining'] *
-                  (1.0 + payload['DesiredDiscountRate'] / 100.0))) > 0.19
+                  (1.0 + payload['DesiredDiscountRate'] / 100.0))) > 0.24
                 and
                 payload['Price'] <= 5.0
                 )
