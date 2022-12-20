@@ -1,29 +1,23 @@
 # -*- coding: utf-8 -*-
 """The file contains the class definition of Bondora data loader."""
 
-import os
-import sys
-import inspect
 import pickle
 import zipfile
 from datetime import datetime, timedelta
 from io import BytesIO
 from urllib.request import urlopen, Request
 import pandas as pd
+from bondora.setup_logger import logger
+from utils.datetime_utils import str_to_date
 
-currentdir = os.path.dirname(
-    os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
+pd.set_option("display.max_columns", 20)
+pd.set_option("display.max_rows", 1000)
 
-from setup_logger import logger
-from toolkit import str_to_date
-
-
-URL_DATA = 'https://www.bondora.com/marketing/media/ResaleArchive.zip'
+URL_DATA_RESALES = 'https://www.bondora.com/marketing/media/ResaleArchive.zip'
+URL_DATA_LOANS = "https://www.bondora.com/marketing/media/LoanData.zip"
 
 
-class DataLoader():
+class DataLoader:
     """Class representation of data loader."""
 
     def __init__(self, start_date, end_date):
@@ -58,9 +52,9 @@ class DataLoader():
                 start_date = (datetime.now() - timedelta(days=365)).date()
         self.start_date = start_date
 
-        self.data = None
+        #self.data = None
 
-    def _unzip(self, file):
+    def __unzip(self, file):
         """
         Read zipped csv-file into pandas DataFrame.
 
@@ -84,7 +78,7 @@ class DataLoader():
             except Exception as e:
                 logger.error(e)
 
-    def download_data(self):
+    def download_data(self, url):
         """
         Download zipped data from internet and unzip it.
 
@@ -104,14 +98,14 @@ class DataLoader():
                    'Connection': 'keep-alive'}
 
         try:
-            request = Request(URL_DATA, None, headers)
+            request = Request(url, None, headers)
             response = urlopen(request)
-            self.data = self._unzip(BytesIO(response.read()))
+            return self.__unzip(BytesIO(response.read()))
 
         except Exception as e:
             logger.error(e)
 
-    def process_data(self):
+    def process_resale_data(self, data):
         """
         Select important columns and rows between `start_date` and `end_date`.
 
@@ -124,49 +118,38 @@ class DataLoader():
         None.
 
         """
-        df = pd.DataFrame()
-
         try:
             # select important columns and rows corresponding
             # to successful transactions (`Result` == 'Successful')
-            columns = ['PrincipalAtEnd', 'DiscountRate',
+            columns = ["loan_id", 'PrincipalAtEnd', 'DiscountRate',
                        'StartDate', 'EndDate']
-            df = self.data.loc[self.data['Result'] == 'Successful', columns]
-
+            data = data.loc[data['Result'] == 'Successful', columns]
+            data["loan_id"] = data["loan_id"].apply(lambda s: s[1:-1])
             # convert column type from string to datetime format
-            df['StartDate'] = pd.to_datetime(df['StartDate'])
-            df['EndDate'] = pd.to_datetime(df['EndDate'])
-
+            data['StartDate'] = pd.to_datetime(data['StartDate'])
+            data['EndDate'] = pd.to_datetime(data['EndDate'])
             # select transactions realized after or on start_date
             if self.start_date:
-                df = df.loc[df['EndDate'].dt.date >= self.start_date, :]
-
+                data = data.loc[data['EndDate'].dt.date >= self.start_date, :]
             # select transaction realized before or on end_date
             if self.end_date:
-                df = df.loc[df['EndDate'].dt.date <= self.end_date, :]
-
+                data = data.loc[data['EndDate'].dt.date <= self.end_date, :]
             # remove transactions with `DiscountRate` > 100%
-            df = df.loc[df['DiscountRate'] <= 100., :]
-
+            data = data.loc[data['DiscountRate'] <= 100., :]
             # set `DiscountRate` as integer
-            df['DiscountRate'] = df['DiscountRate'].astype(int)
-
+            data['DiscountRate'] = data['DiscountRate'].astype(int)
             # calculate time (in seconds) how long a loan was offered for sale
-            df['OfferTime'] = (df['EndDate'] - df['StartDate']).astype(
+            data['OfferTime'] = (data['EndDate'] - data['StartDate']).astype(
                 'timedelta64[s]')
-
             # remove column `StartDate`
-            df.drop('StartDate', axis=1, inplace=True)
-
+            data.drop('StartDate', axis=1, inplace=True)
             # reset index
-            df.reset_index(drop=True, inplace=True)
-
-            self.data = df
-
+            data.reset_index(drop=True, inplace=True)
+            return data
         except Exception as e:
             logger.error(e)
 
-    def save_data(self, path):
+    def save_data(self, path, data):
         """
         Save DataFrame to file.
 
@@ -180,8 +163,44 @@ class DataLoader():
         None.
 
         """
-        if self.data is not None:
+        if data is not None:
             with open(path, 'wb') as handle:
-                pickle.dump(self.data,
+                pickle.dump(data,
                             handle,
                             protocol=pickle.HIGHEST_PROTOCOL)
+
+
+if __name__ == "__main__":
+    loader = DataLoader("2022-01-01", "2022-12-18")
+    #resales = loader.download_data(URL_DATA_RESALES)
+    #resales = loader.process_resale_data(resales)
+    path_resales = "/resales.pkl"
+    #loader.save_data(path_resales, resales)
+
+    #loans = loader.download_data(URL_DATA_LOANS)
+    #loans = loader.process_resale_data(loans)
+    path_loans = "/loans.pkl"
+    #loader.save_data(path_loans, loans)
+
+
+    resales = pd.read_pickle(path_resales)
+    resales = resales.groupby("loan_id", as_index=False). \
+        agg(
+        tmp1=pd.NamedAgg(column="DiscountRate", aggfunc=max),
+        tmp2=pd.NamedAgg(column="DiscountRate", aggfunc=min)
+    ). \
+        rename(columns={"tmp1": "max_discount",
+                        "tmp2": "min_discount"})
+
+
+    loans = pd.read_pickle(path_loans)
+    loan_columns = ["LoanId", "Age", "Country", "Interest", "LoanDuration",
+                    "NextPaymentNr", "ProbabilityOfDefault", "Status", "Restructured"]
+    loans = loans.loc[:, loan_columns]
+    loans = pd.merge(loans, resales, left_on="LoanId", right_on="loan_id", how="inner").\
+        drop("loan_id", axis=1)
+    loans = loans.loc[(loans["Status"] == "Current") &
+                      (~loans["Restructured"]),
+                      ["Interest", "NextPaymentNr", "ProbabilityOfDefault",
+                       "max_discount", "min_discount"]]
+    print(loans.sort_values(by="min_discount"))
